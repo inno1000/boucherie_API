@@ -8,6 +8,7 @@ use App\Models\Abattage;
 use App\Models\AbattageLigne;
 use App\Models\MouvementStock;
 use App\Models\Stock;
+use App\Models\StockCategorie;
 use App\Repositories\AbattageRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,24 @@ class AbattageService
 
             if ($animal->statut !== 'en_attente') {
                 throw ValidationException::withMessages([
-                    'animal_id' => ["Cet animal a déjà été abattu ou vendu."],
+                    'animal_id' => ['Cet animal a déjà été abattu ou vendu.'],
+                ]);
+            }
+
+            $lignes = $data['lignes'] ?? [];
+            $stocks = $data['stocks'] ?? [];
+            unset($data['lignes'], $data['stocks']);
+
+            if (! empty($lignes)) {
+                $poidsFromLignes = collect($lignes)->sum(fn ($l) => (float) $l['poids_kg']);
+                if (empty($data['poids_carcasse_kg'])) {
+                    $data['poids_carcasse_kg'] = $poidsFromLignes;
+                }
+            }
+
+            if (empty($data['poids_carcasse_kg'])) {
+                throw ValidationException::withMessages([
+                    'poids_carcasse_kg' => ['Le poids carcasse est requis.'],
                 ]);
             }
 
@@ -51,11 +69,7 @@ class AbattageService
             }
 
             $data['user_id'] = $userId;
-            $lignes          = $data['lignes'] ?? [];
-            unset($data['lignes']);
 
-            // Flux fournisseur : boucherie_id reste null, le stock sera alimenté à la réception
-            // Flux boucherie   : boucherie_id provient de l'animal
             $isFournisseurFlow = $animal->isOwnedByFournisseur();
             if (! $isFournisseurFlow) {
                 $data['boucherie_id'] = $animal->boucherie_id;
@@ -65,9 +79,24 @@ class AbattageService
 
             $animal->update(['statut' => 'abattu']);
 
-            // Alimentation directe du stock uniquement dans le flux boucherie
+            foreach ($lignes as $ligne) {
+                AbattageLigne::create([
+                    'abattage_id' => $abattage->id,
+                    'categorie'   => $ligne['categorie'],
+                    'poids_kg'    => $ligne['poids_kg'],
+                ]);
+
+                if (! $isFournisseurFlow && $abattage->boucherie_id) {
+                    $stockCat = StockCategorie::firstOrCreate(
+                        ['boucherie_id' => $abattage->boucherie_id, 'categorie' => $ligne['categorie']],
+                        ['poids_kg_disponible' => 0],
+                    );
+                    $stockCat->increment('poids_kg_disponible', (float) $ligne['poids_kg']);
+                }
+            }
+
             if (! $isFournisseurFlow) {
-                foreach ($data['stocks'] ?? [] as $stockData) {
+                foreach ($stocks as $stockData) {
                     $stock = Stock::firstOrCreate(
                         ['boucherie_id' => $abattage->boucherie_id, 'produit_id' => $stockData['produit_id']],
                         ['quantite' => 0, 'seuil_alerte' => $stockData['seuil_alerte'] ?? 0, 'abattage_id' => $abattage->id]
@@ -83,15 +112,6 @@ class AbattageService
                         'motif'    => "Abattage #{$abattage->id}",
                     ]);
                 }
-            }
-
-            // v2 — lignes par catégorie (optionnel, fournisseur flow)
-            foreach ($lignes as $ligne) {
-                AbattageLigne::create([
-                    'abattage_id' => $abattage->id,
-                    'categorie'   => $ligne['categorie'],
-                    'poids_kg'    => $ligne['poids_kg'],
-                ]);
             }
 
             return $abattage->fresh(['animal', 'stocks.produit', 'distributions', 'lignes', 'attachments']);

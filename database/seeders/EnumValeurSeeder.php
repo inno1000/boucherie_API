@@ -22,10 +22,9 @@ class EnumValeurSeeder extends Seeder
             ],
             'categorie_produit' => [
                 ['valeur' => 'viande_rouge', 'libelle' => 'Viande rouge',  'systeme' => false, 'ordre' => 1],
-                ['valeur' => 'volaille',     'libelle' => 'Volaille',      'systeme' => false, 'ordre' => 2],
-                ['valeur' => 'abats',        'libelle' => 'Abats',         'systeme' => false, 'ordre' => 3],
-                ['valeur' => 'charcuterie',  'libelle' => 'Charcuterie',   'systeme' => false, 'ordre' => 4],
-                ['valeur' => 'autre',        'libelle' => 'Autre',         'systeme' => false, 'ordre' => 5],
+                ['valeur' => 'abats',        'libelle' => 'Abats',         'systeme' => false, 'ordre' => 2],
+                ['valeur' => 'charcuterie',  'libelle' => 'Charcuterie',   'systeme' => false, 'ordre' => 3],
+                ['valeur' => 'autre',        'libelle' => 'Autre',         'systeme' => false, 'ordre' => 4],
             ],
             'unite_produit' => [
                 ['valeur' => 'kg',    'libelle' => 'Kilogramme', 'systeme' => false, 'ordre' => 1],

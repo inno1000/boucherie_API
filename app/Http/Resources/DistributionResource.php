@@ -40,6 +40,7 @@ class DistributionResource extends JsonResource
             'statut'              => $this->statut,
             'notes'               => $this->notes,
             'reception'           => $this->whenLoaded('reception', fn () => new ReceptionResource($this->reception)),
+            'lignes'              => $this->whenLoaded('lignes'),
             'created_at'          => $this->created_at?->toISOString(),
             'updated_at'          => $this->updated_at?->toISOString(),
         ];

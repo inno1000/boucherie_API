@@ -3,10 +3,14 @@
 declare(strict_types=1);
 
 use App\Models\Abattage;
+use App\Models\Animal;
 use App\Models\Boucherie;
 use App\Models\Distribution;
+use App\Models\DistributionLigne;
+use App\Models\EnumValeur;
 use App\Models\Fournisseur;
 use App\Models\Produit;
+use App\Models\StockCategorie;
 use Laravel\Sanctum\Sanctum;
 
 describe('GET /api/v1/distributions', function () {
@@ -40,6 +44,44 @@ describe('GET /api/v1/distributions', function () {
 });
 
 describe('POST /api/v1/distributions', function () {
+    it('crée une distribution par catégories sans produit (fournisseur)', function () {
+        EnumValeur::firstOrCreate(
+            ['type' => 'categorie_produit', 'valeur' => 'viande_rouge'],
+            ['libelle' => 'Viande rouge', 'systeme' => false, 'ordre' => 1],
+        );
+
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        $boucherie   = Boucherie::factory()->create();
+        $fournisseur->boucheries()->attach($boucherie->id);
+
+        $animal = Animal::factory()->create([
+            'boucherie_id'   => null,
+            'fournisseur_id' => $fournisseur->id,
+            'statut'         => 'abattu',
+        ]);
+        $abattage = Abattage::factory()->create([
+            'animal_id'    => $animal->id,
+            'boucherie_id' => null,
+            'user_id'      => $user->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/distributions', [
+            'abattage_id'  => $abattage->id,
+            'boucherie_id' => $boucherie->id,
+            'lignes'       => [
+                ['categorie' => 'viande_rouge', 'poids_kg' => 45.5, 'prix_par_kg' => 2500],
+            ],
+        ])->assertCreated()
+          ->assertJsonPath('data.quantite', '45.500')
+          ->assertJsonPath('data.produit_id', null)
+          ->assertJsonCount(1, 'data.lignes');
+
+        expect(DistributionLigne::count())->toBe(1);
+    });
+
     it('crée une distribution (fournisseur)', function () {
         $fournisseur = Fournisseur::factory()->create();
         $user        = fournisseurUser($fournisseur);

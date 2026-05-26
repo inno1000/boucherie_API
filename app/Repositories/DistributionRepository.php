@@ -15,7 +15,7 @@ class DistributionRepository
     {
         return $this->model->query()
             ->where('fournisseur_user_id', $fournisseurUserId)
-            ->with(['abattage', 'boucherie', 'produit', 'reception'])
+            ->with(['abattage', 'boucherie', 'produit', 'lignes', 'reception'])
             ->latest()
             ->paginate($perPage);
     }
@@ -24,7 +24,7 @@ class DistributionRepository
     {
         return $this->model->query()
             ->where('boucherie_id', $boucherieId)
-            ->with(['abattage', 'fournisseurUser', 'produit', 'reception'])
+            ->with(['abattage', 'fournisseurUser', 'produit', 'lignes', 'reception'])
             ->latest()
             ->paginate($perPage);
     }
@@ -32,7 +32,7 @@ class DistributionRepository
     public function paginateAll(int $perPage = 15): LengthAwarePaginator
     {
         return $this->model->query()
-            ->with(['abattage', 'boucherie', 'produit', 'fournisseurUser', 'reception'])
+            ->with(['abattage', 'boucherie', 'produit', 'lignes', 'fournisseurUser', 'reception'])
             ->latest()
             ->paginate($perPage);
     }
@@ -40,7 +40,7 @@ class DistributionRepository
     public function findOrFail(string $id): Distribution
     {
         return $this->model->query()
-            ->with(['abattage.animal', 'boucherie', 'produit', 'fournisseurUser', 'reception'])
+            ->with(['abattage.animal', 'boucherie', 'produit', 'lignes', 'fournisseurUser', 'reception'])
             ->findOrFail($id);
     }
 
@@ -53,6 +53,6 @@ class DistributionRepository
     {
         $distribution = $this->findOrFail($id);
         $distribution->update($data);
-        return $distribution->fresh(['abattage', 'boucherie', 'produit', 'reception']);
+        return $distribution->fresh(['abattage', 'boucherie', 'produit', 'lignes', 'reception']);
     }
 }

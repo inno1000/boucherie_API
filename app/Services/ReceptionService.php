@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 class ReceptionService
 {
     public function __construct(
-        private readonly ReceptionRepository  $repository,
+        private readonly ReceptionRepository $repository,
         private readonly DistributionRepository $distributionRepository,
     ) {}
 
@@ -40,8 +40,11 @@ class ReceptionService
     public function create(array $data, ?string $boucherieId, int $userId): Reception
     {
         return DB::transaction(function () use ($data, $boucherieId, $userId) {
-            $lignes       = $data['lignes'] ?? [];
+            $lignesReception = $data['lignes'] ?? [];
+            unset($data['lignes']);
+
             $distribution = $this->distributionRepository->findOrFail($data['distribution_id']);
+            $distribution->load('lignes');
 
             if ($distribution->boucherie_id !== $boucherieId) {
                 throw ValidationException::withMessages([
@@ -64,42 +67,62 @@ class ReceptionService
                 'notes'           => $data['notes'] ?? null,
             ]);
 
-            // Marquer la distribution comme acceptée
             $this->distributionRepository->update($distribution->id, ['statut' => 'acceptee']);
 
-            // Alimenter le stock
-            $stock = Stock::firstOrCreate(
-                ['boucherie_id' => $boucherieId, 'produit_id' => $distribution->produit_id],
-                ['quantite' => 0, 'seuil_alerte' => 0, 'abattage_id' => $distribution->abattage_id]
-            );
-
-            $stock->increment('quantite', (float) $data['quantite_recue']);
-
-            MouvementStock::create([
-                'stock_id' => $stock->id,
-                'user_id'  => $userId,
-                'type'     => 'entree',
-                'quantite' => $data['quantite_recue'],
-                'motif'    => "Réception distribution #{$distribution->id}",
-            ]);
-
-            // v2 — lignes par catégorie + mise à jour stocks_categories
-            foreach ($lignes as $ligne) {
-                ReceptionLigne::create([
-                    'reception_id'     => $reception->id,
-                    'categorie'        => $ligne['categorie'],
-                    'poids_kg_attendu' => $ligne['poids_kg_attendu'] ?? null,
-                    'poids_kg_recu'    => $ligne['poids_kg_recu'],
-                ]);
-
-                $stockCat = StockCategorie::firstOrCreate(
-                    ['boucherie_id' => $boucherieId, 'categorie' => $ligne['categorie']],
-                    ['poids_kg_disponible' => 0]
-                );
-                $stockCat->increment('poids_kg_disponible', (float) $ligne['poids_kg_recu']);
+            if (empty($lignesReception) && $distribution->lignes->isNotEmpty()) {
+                $lignesReception = $distribution->lignes->map(fn ($l) => [
+                    'categorie'        => $l->categorie,
+                    'poids_kg_attendu' => (float) $l->poids_kg,
+                    'poids_kg_recu'    => (float) $l->poids_kg,
+                ])->all();
             }
 
-            return $reception->fresh(['distribution.produit', 'distribution.fournisseurUser', 'lignes', 'attachments']);
+            if (! empty($lignesReception)) {
+                foreach ($lignesReception as $ligne) {
+                    ReceptionLigne::create([
+                        'reception_id'     => $reception->id,
+                        'categorie'        => $ligne['categorie'],
+                        'poids_kg_attendu' => $ligne['poids_kg_attendu'] ?? null,
+                        'poids_kg_recu'    => $ligne['poids_kg_recu'],
+                    ]);
+
+                    $stockCat = StockCategorie::firstOrCreate(
+                        ['boucherie_id' => $boucherieId, 'categorie' => $ligne['categorie']],
+                        ['poids_kg_disponible' => 0],
+                    );
+                    $stockCat->increment('poids_kg_disponible', (float) $ligne['poids_kg_recu']);
+                }
+            } elseif ($distribution->produit_id) {
+                $stock = Stock::firstOrCreate(
+                    ['boucherie_id' => $boucherieId, 'produit_id' => $distribution->produit_id],
+                    ['quantite' => 0, 'seuil_alerte' => 0, 'abattage_id' => $distribution->abattage_id],
+                );
+
+                $stock->increment('quantite', (float) $data['quantite_recue']);
+
+                MouvementStock::create([
+                    'stock_id' => $stock->id,
+                    'user_id'  => $userId,
+                    'type'     => 'entree',
+                    'quantite' => $data['quantite_recue'],
+                    'motif'    => "Réception distribution #{$distribution->id}",
+                ]);
+
+                $produit = $distribution->produit;
+                if ($produit?->categorie) {
+                    $stockCat = StockCategorie::firstOrCreate(
+                        ['boucherie_id' => $boucherieId, 'categorie' => $produit->categorie],
+                        ['poids_kg_disponible' => 0],
+                    );
+                    $stockCat->increment('poids_kg_disponible', (float) $data['quantite_recue']);
+                }
+            } else {
+                throw ValidationException::withMessages([
+                    'lignes' => ['Aucune ligne de catégorie sur cette distribution.'],
+                ]);
+            }
+
+            return $reception->fresh(['distribution.produit', 'distribution.lignes', 'distribution.fournisseurUser', 'lignes', 'attachments']);
         });
     }
 }

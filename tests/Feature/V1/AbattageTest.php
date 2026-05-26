@@ -5,7 +5,10 @@ declare(strict_types=1);
 use App\Models\Abattage;
 use App\Models\Animal;
 use App\Models\Boucherie;
+use App\Models\EnumValeur;
+use App\Models\Fournisseur;
 use App\Models\Produit;
+use App\Models\StockCategorie;
 use Laravel\Sanctum\Sanctum;
 
 describe('GET /api/v1/abattages', function () {
@@ -77,7 +80,64 @@ describe('POST /api/v1/abattages', function () {
             ->assertJsonStructure(['message', 'errors']);
     });
 
-    it('retourne 422 si stocks manque pour un boucher', function () {
+    it('enregistre un abattage par catégories sans stock produit (boucher)', function () {
+        EnumValeur::firstOrCreate(
+            ['type' => 'categorie_produit', 'valeur' => 'viande_rouge'],
+            ['libelle' => 'Viande rouge', 'systeme' => false, 'ordre' => 1],
+        );
+
+        $boucherie = Boucherie::factory()->create();
+        $boucher   = boucherUser($boucherie);
+        $animal    = Animal::factory()->create([
+            'boucherie_id' => $boucherie->id,
+            'statut'       => 'en_attente',
+        ]);
+        Sanctum::actingAs($boucher);
+
+        $this->postJson('/api/v1/abattages', [
+            'animal_id'     => $animal->id,
+            'date_abattage' => '2026-05-10',
+            'lignes'        => [
+                ['categorie' => 'viande_rouge', 'poids_kg' => 80],
+            ],
+        ])->assertCreated()
+          ->assertJsonPath('data.poids_carcasse_kg', '80.00');
+
+        $stockCat = StockCategorie::where('boucherie_id', $boucherie->id)
+            ->where('categorie', 'viande_rouge')
+            ->first();
+
+        expect($stockCat)->not->toBeNull()
+            ->and((float) $stockCat->poids_kg_disponible)->toBe(80.0);
+    });
+
+    it('enregistre un abattage fournisseur avec lignes par catégorie', function () {
+        EnumValeur::firstOrCreate(
+            ['type' => 'categorie_produit', 'valeur' => 'abats'],
+            ['libelle' => 'Abats', 'systeme' => false, 'ordre' => 1],
+        );
+
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        $animal      = Animal::factory()->create([
+            'boucherie_id'   => null,
+            'fournisseur_id' => $fournisseur->id,
+            'statut'         => 'en_attente',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/abattages', [
+            'animal_id'     => $animal->id,
+            'date_abattage' => '2026-05-10',
+            'lignes'        => [
+                ['categorie' => 'abats', 'poids_kg' => 12.5],
+            ],
+        ])->assertCreated()
+          ->assertJsonPath('data.poids_carcasse_kg', '12.50')
+          ->assertJsonCount(1, 'data.lignes');
+    });
+
+    it('retourne 422 si stocks manque pour un boucher sans lignes', function () {
         $boucherie = Boucherie::factory()->create();
         $boucher   = boucherUser($boucherie);
         $animal    = Animal::factory()->create([

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\LigneVente;
 use App\Models\MouvementStock;
 use App\Models\Stock;
+use App\Models\StockCategorie;
 use App\Models\Vente;
 use App\Repositories\VenteRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -66,21 +67,36 @@ class VenteService
 
                 $sousTotal = round($prix * $quantite, 2);
 
-                if (!$stock || (float) $stock->quantite < $quantite) {
+                $stockCat = $produit->categorie
+                    ? StockCategorie::where('boucherie_id', $vente->boucherie_id)
+                        ->where('categorie', $produit->categorie)
+                        ->first()
+                    : null;
+
+                $stockCategorieOk = $stockCat && (float) $stockCat->poids_kg_disponible >= $quantite;
+                $stockProduitOk   = $stock && (float) $stock->quantite >= $quantite;
+
+                if (! $stockCategorieOk && ! $stockProduitOk) {
                     throw ValidationException::withMessages([
                         'lignes' => ["Stock insuffisant pour le produit {$produit->nom}."],
                     ]);
                 }
 
-                $stock->decrement('quantite', $quantite);
+                if ($stockCategorieOk) {
+                    $stockCat->decrement('poids_kg_disponible', $quantite);
+                }
 
-                MouvementStock::create([
-                    'stock_id' => $stock->id,
-                    'user_id'  => $userId,
-                    'type'     => 'sortie',
-                    'quantite' => $quantite,
-                    'motif'    => "Vente #{$vente->id}",
-                ]);
+                if ($stockProduitOk) {
+                    $stock->decrement('quantite', $quantite);
+
+                    MouvementStock::create([
+                        'stock_id' => $stock->id,
+                        'user_id'  => $userId,
+                        'type'     => 'sortie',
+                        'quantite' => $quantite,
+                        'motif'    => "Vente #{$vente->id}",
+                    ]);
+                }
 
                 LigneVente::create([
                     'vente_id'      => $vente->id,
@@ -113,6 +129,17 @@ class VenteService
                 }
 
                 foreach ($vente->lignes as $ligne) {
+                    $ligne->loadMissing('produit');
+                    $categorie = $ligne->produit?->categorie;
+
+                    if ($categorie) {
+                        $stockCat = StockCategorie::firstOrCreate(
+                            ['boucherie_id' => $vente->boucherie_id, 'categorie' => $categorie],
+                            ['poids_kg_disponible' => 0],
+                        );
+                        $stockCat->increment('poids_kg_disponible', (float) $ligne->quantite);
+                    }
+
                     $stock = Stock::where('boucherie_id', $vente->boucherie_id)
                         ->where('produit_id', $ligne->produit_id)
                         ->first();

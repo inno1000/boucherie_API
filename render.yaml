@@ -58,5 +58,3 @@ services:
         value: sync
       - key: SANCTUM_STATELESS_DOMAINS
         sync: false           # Set to your frontend domain(s), comma-separated
-      - key: ALLOWED_ORIGINS
-        value: http://localhost:3000,http://localhost:8000,https://localhost,http://localhost,capacitor://localhost

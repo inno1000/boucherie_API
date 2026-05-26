@@ -49,12 +49,20 @@ class DistributionService
                 $fournisseurUserId,
             );
 
+            if (! empty($lignes)) {
+                $data['quantite'] = collect($lignes)->sum(fn ($l) => (float) $l['poids_kg']);
+                $data['produit_id'] ??= null;
+            } elseif (empty($data['produit_id']) || ! isset($data['quantite'])) {
+                throw ValidationException::withMessages([
+                    'lignes' => ['Indiquez des lignes par catégorie ou un produit avec une quantité.'],
+                ]);
+            }
+
             $data['fournisseur_user_id'] = $fournisseurUserId;
             $data['statut']              = 'en_attente';
 
             $distribution = $this->repository->create($data);
 
-            // v2 — lignes par catégorie (optionnel)
             foreach ($lignes as $ligne) {
                 DistributionLigne::create([
                     'distribution_id' => $distribution->id,
@@ -64,7 +72,7 @@ class DistributionService
                 ]);
             }
 
-            return $distribution->fresh(['lignes', 'boucherie', 'abattage']);
+            return $distribution->fresh(['lignes', 'boucherie', 'abattage', 'produit']);
         });
     }
 

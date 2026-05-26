@@ -1,6 +1,10 @@
 <?php
 
-$capacitorOrigins = [
+/**
+ * Origines Capacitor (WebView Android/iOS) — toujours fusionnées, même si ALLOWED_ORIGINS
+ * est restreint sur Render (sinon fetch depuis https://localhost est bloqué).
+ */
+const CAPACITOR_CORS_ORIGINS = [
     'https://localhost',
     'http://localhost',
     'capacitor://localhost',
@@ -15,12 +19,12 @@ $originsFromEnv = array_values(array_filter(array_map(
 $defaultOrigins = [
     'http://localhost:3000',
     'http://localhost:8000',
-    ...$capacitorOrigins,
+    ...CAPACITOR_CORS_ORIGINS,
 ];
 
 $allowedOrigins = array_values(array_unique(array_merge(
     $originsFromEnv !== [] ? $originsFromEnv : $defaultOrigins,
-    $capacitorOrigins,
+    CAPACITOR_CORS_ORIGINS,
 )));
 
 return [
@@ -29,8 +33,6 @@ return [
     |--------------------------------------------------------------------------
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
-    |
-    | Origines Capacitor (https://localhost) toujours fusionnées pour l'app mobile.
     */
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
