@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateBoucherieRequest;
 use App\Http\Resources\BoucherieResource;
 use App\Services\BoucherieService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -31,8 +32,16 @@ class BoucherieController extends Controller
      *
      * @response {"data":[{"id":1,"nom":"Boucherie Centrale","adresse":"12 rue du Marché","ville":"Paris","telephone":"+33612345678","actif":true,"created_at":"2024-01-15T10:00:00.000Z","updated_at":"2024-01-15T10:00:00.000Z"}],"links":{"first":"http://localhost/api/v1/boucheries?page=1","last":"http://localhost/api/v1/boucheries?page=1","prev":null,"next":null},"meta":{"current_page":1,"from":1,"last_page":1,"path":"http://localhost/api/v1/boucheries","per_page":15,"to":1,"total":1}}
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
+        $user = $request->user();
+
+        if ($user->hasRole('fournisseur')) {
+            return BoucherieResource::collection(
+                $this->service->paginateForFournisseurUser($user->id),
+            );
+        }
+
         return BoucherieResource::collection($this->service->paginate());
     }
 

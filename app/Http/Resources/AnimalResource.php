@@ -32,6 +32,7 @@ class AnimalResource extends JsonResource
             'prix_achat'            => $this->prix_achat,
             'numero_tag'            => $this->numero_tag,
             'statut'                => $this->statut,
+            'attachments'           => AttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at'            => $this->created_at?->toISOString(),
             'updated_at'            => $this->updated_at?->toISOString(),
         ];

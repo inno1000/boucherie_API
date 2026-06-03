@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\AchatFournisseur;
+use App\Models\Attachment;
 use App\Models\Boucherie;
 use App\Models\EnumValeur;
 use App\Models\Fournisseur;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 describe('GET /api/v1/achats-fournisseurs', function () {
@@ -43,7 +45,6 @@ describe('POST /api/v1/achats-fournisseurs', function () {
         $this->postJson('/api/v1/achats-fournisseurs', [
             'fournisseur_id' => $fournisseur->id,
             'date_achat'     => '2026-05-01',
-            'montant_total'  => 540000,
             'animaux'        => [
                 [
                     'espece'       => 'bovin',
@@ -54,7 +55,25 @@ describe('POST /api/v1/achats-fournisseurs', function () {
             ],
         ])->assertCreated()
           ->assertJsonPath('message', 'Achat enregistré avec succès.')
+          ->assertJsonPath('data.montant_total', 270000)
           ->assertJsonStructure(['data' => ['animaux']]);
+    });
+
+    it('calcule le montant total à partir des prix d\'achat', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        EnumValeur::factory()->especeAnimal('bovin')->create();
+
+        $this->postJson('/api/v1/achats-fournisseurs', [
+            'date_achat' => '2026-05-01',
+            'animaux'    => [
+                ['espece' => 'bovin', 'poids_vif_kg' => 300, 'prix_achat' => 200000],
+                ['espece' => 'bovin', 'poids_vif_kg' => 280, 'prix_achat' => 180000],
+            ],
+        ])->assertCreated()
+          ->assertJsonPath('data.montant_total', 380000);
     });
 
     it('crée un achat (fournisseur depuis son profil)', function () {
@@ -65,9 +84,8 @@ describe('POST /api/v1/achats-fournisseurs', function () {
         EnumValeur::factory()->especeAnimal('bovin')->create();
 
         $this->postJson('/api/v1/achats-fournisseurs', [
-            'date_achat'    => '2026-05-01',
-            'montant_total' => 200000,
-            'animaux'       => [
+            'date_achat' => '2026-05-01',
+            'animaux'    => [
                 [
                     'espece'       => 'bovin',
                     'poids_vif_kg' => 300,
@@ -77,14 +95,52 @@ describe('POST /api/v1/achats-fournisseurs', function () {
         ])->assertCreated();
     });
 
+    it('lie les photos à l\'animal créé', function () {
+        Storage::fake('local');
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        EnumValeur::factory()->especeAnimal('bovin')->create();
+
+        $path = 'attachments/'.$user->id.'/animal.jpg';
+        Storage::disk('local')->put($path, 'jpeg-content');
+
+        $attachment = Attachment::create([
+            'user_id'       => $user->id,
+            'disk'          => 'local',
+            'path'          => $path,
+            'original_name' => 'animal.jpg',
+            'mime_type'     => 'image/jpeg',
+            'size_bytes'    => 12,
+        ]);
+
+        $this->postJson('/api/v1/achats-fournisseurs', [
+            'date_achat' => '2026-05-01',
+            'animaux'    => [
+                [
+                    'espece'          => 'bovin',
+                    'poids_vif_kg'    => 300,
+                    'prix_achat'      => 200000,
+                    'numero_tag'      => 'TAG-PHOTO',
+                    'attachment_ids'  => [$attachment->id],
+                ],
+            ],
+        ])->assertCreated()
+          ->assertJsonPath('data.animaux.0.attachments.0.id', $attachment->id);
+
+        $attachment->refresh();
+        expect($attachment->attachable_type)->toBe(\App\Models\Animal::class);
+        expect($attachment->attachable_id)->not->toBeNull();
+    });
+
     it('retourne 422 si fournisseur_id manque (boucher)', function () {
         $boucherie = Boucherie::factory()->create();
         Sanctum::actingAs(boucherUser($boucherie));
 
         $this->postJson('/api/v1/achats-fournisseurs', [
-            'date_achat'    => '2026-05-01',
-            'montant_total' => 100000,
-            'animaux'       => [['espece' => 'bovin', 'poids_vif_kg' => 200, 'prix_achat' => 100000]],
+            'date_achat' => '2026-05-01',
+            'animaux'    => [['espece' => 'bovin', 'poids_vif_kg' => 200, 'prix_achat' => 100000]],
         ])->assertUnprocessable();
     });
 

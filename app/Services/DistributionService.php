@@ -18,19 +18,19 @@ class DistributionService
         private readonly FournisseurBoucherieService $fournisseurBoucherieService,
     ) {}
 
-    public function paginateByFournisseur(int $fournisseurUserId): LengthAwarePaginator
+    public function paginateByFournisseur(int $fournisseurUserId, ?string $statut = null): LengthAwarePaginator
     {
-        return $this->repository->paginateByFournisseur($fournisseurUserId);
+        return $this->repository->paginateByFournisseur($fournisseurUserId, $statut);
     }
 
-    public function paginateByBoucherie(string $boucherieId): LengthAwarePaginator
+    public function paginateByBoucherie(string $boucherieId, ?string $statut = null): LengthAwarePaginator
     {
-        return $this->repository->paginateByBoucherie($boucherieId);
+        return $this->repository->paginateByBoucherie($boucherieId, $statut);
     }
 
-    public function paginateAll(): LengthAwarePaginator
+    public function paginateAll(?string $statut = null): LengthAwarePaginator
     {
-        return $this->repository->paginateAll();
+        return $this->repository->paginateAll($statut);
     }
 
     public function findById(string $id): Distribution

@@ -33,7 +33,9 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
-            Route::get('me',      [AuthController::class, 'me']);
+            Route::get('me', [AuthController::class, 'me']);
+            Route::patch('me', [AuthController::class, 'updateMe']);
+            Route::patch('password', [AuthController::class, 'updatePassword']);
         });
     });
 
@@ -97,6 +99,8 @@ Route::prefix('v1')->group(function () {
             Route::get('produits/{produit}',     [ProduitController::class, 'show']);
             Route::get('animaux',                [AnimalController::class, 'index']);
             Route::get('animaux/{animal}',       [AnimalController::class, 'show']);
+            Route::patch('animaux/{animal}',     [AnimalController::class, 'update']);
+            Route::delete('animaux/{animal}',    [AnimalController::class, 'destroy']);
 
             // Achats fournisseurs — accessibles aux 3 rôles (logique de filtrage dans le controller)
             Route::get('achats-fournisseurs',         [AchatFournisseurController::class, 'index']);

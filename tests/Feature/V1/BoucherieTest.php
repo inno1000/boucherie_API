@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Boucherie;
+use App\Models\Fournisseur;
 use Laravel\Sanctum\Sanctum;
 
 // ── GET /api/v1/boucheries ─────────────────────────────────────────────────
@@ -26,11 +27,22 @@ describe('GET /api/v1/boucheries', function () {
             ->assertJsonStructure(['data']);
     });
 
-    it('retourne la liste pour un fournisseur', function () {
-        Sanctum::actingAs(fournisseurUser());
+    it('retourne uniquement les boucheries desservies pour un fournisseur', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        $served      = Boucherie::factory()->create(['nom' => 'Boucherie desservie']);
+        $other       = Boucherie::factory()->create(['nom' => 'Boucherie autre']);
+        $fournisseur->boucheries()->attach($served->id);
 
-        $this->getJson('/api/v1/boucheries')
-            ->assertOk();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/boucheries')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $served->id);
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        expect($ids)->toContain($served->id)->not->toContain($other->id);
     });
 
     it('retourne 401 sans authentification', function () {

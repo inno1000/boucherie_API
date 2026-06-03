@@ -24,6 +24,11 @@ class AttachmentService
         'audio/wav',
         'audio/x-wav',
         'video/webm',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
     ];
 
     public function storeUpload(UploadedFile $file, User $user): Attachment
@@ -31,7 +36,7 @@ class AttachmentService
         $mime = $file->getMimeType() ?: 'application/octet-stream';
         if (! in_array($mime, self::ALLOWED_MIMES, true)) {
             throw ValidationException::withMessages([
-                'file' => ['Format audio non supporté.'],
+                'file' => ['Format de fichier non supporté.'],
             ]);
         }
 
@@ -83,7 +88,7 @@ class AttachmentService
 
         if ($attachments->count() !== count($ids)) {
             throw ValidationException::withMessages([
-                'attachment_ids' => ['Un ou plusieurs fichiers audio sont invalides ou déjà utilisés.'],
+                'attachment_ids' => ['Un ou plusieurs fichiers sont invalides ou déjà utilisés.'],
             ]);
         }
 

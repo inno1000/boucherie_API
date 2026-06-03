@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\AchatFournisseur;
 use App\Models\Animal;
+use App\Models\User;
 use App\Repositories\AchatFournisseurRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -24,9 +25,10 @@ class AchatFournisseurService
         return $this->repository->findOrFail($id);
     }
 
-    public function create(array $data, ?string $boucherieId, int $userId, ?string $fournisseurId = null): AchatFournisseur
+    public function create(array $data, ?string $boucherieId, int $userId, ?string $fournisseurId, User $user): AchatFournisseur
     {
-        return DB::transaction(function () use ($data, $boucherieId, $userId, $fournisseurId) {
+        return DB::transaction(function () use ($data, $boucherieId, $userId, $fournisseurId, $user) {
+            $attachmentService = app(AttachmentService::class);
             $animaux = $data['animaux'] ?? [];
             unset($data['animaux']);
 
@@ -41,19 +43,27 @@ class AchatFournisseurService
             $achat = $this->repository->create($data);
 
             foreach ($animaux as $animalData) {
+                $attachmentIds = $animalData['attachment_ids'] ?? [];
+                unset($animalData['attachment_ids']);
+
                 $animalData['achat_fournisseur_id'] = $achat->id;
                 if ($fournisseurId) {
                     $animalData['fournisseur_id'] = $fournisseurId;
                 } else {
                     $animalData['boucherie_id'] = $boucherieId;
                 }
-                Animal::create($animalData);
+
+                $animal = Animal::create($animalData);
+
+                if (is_array($attachmentIds) && $attachmentIds !== []) {
+                    $attachmentService->linkTo($animal, $attachmentIds, $user);
+                }
             }
 
             $montantCalcule = array_sum(array_column($animaux, 'prix_achat'));
             $achat->update(['montant_total' => $montantCalcule]);
 
-            return $achat->fresh('animaux');
+            return $achat->fresh(['animaux.attachments']);
         });
     }
 }

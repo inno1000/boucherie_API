@@ -49,4 +49,21 @@ class AuthService
             'fournisseur.boucheries',
         ]);
     }
+
+    public function updatePassword(User $user, string $password): User
+    {
+        $user->update(['password' => Hash::make($password)]);
+
+        return $this->loadUserRelations($user->fresh());
+    }
+
+    /**
+     * @param  array{name?: string, email?: string}  $data
+     */
+    public function updateProfile(User $user, array $data): User
+    {
+        $user->update($data);
+
+        return $this->loadUserRelations($user->fresh());
+    }
 }

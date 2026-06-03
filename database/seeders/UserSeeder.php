@@ -45,7 +45,7 @@ class UserSeeder extends Seeder
         $fournisseurUser->syncRoles(['fournisseur']);
 
         // Entité Fournisseur liée au compte utilisateur
-        Fournisseur::firstOrCreate(
+        $fournisseur = Fournisseur::firstOrCreate(
             ['user_id' => $fournisseurUser->id],
             [
                 'boucherie_id' => $boucherie->id,
@@ -56,5 +56,8 @@ class UserSeeder extends Seeder
                 'adresse'      => 'Zone d\'élevage, Ouagadougou',
             ]
         );
+
+        // Lien pivot requis pour créer des distributions vers cette boucherie
+        $fournisseur->boucheries()->syncWithoutDetaching([$boucherie->id]);
     }
 }

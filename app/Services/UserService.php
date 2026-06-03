@@ -19,7 +19,12 @@ class UserService
     public function paginate(?string $boucherieId = null, int $perPage = 15): LengthAwarePaginator
     {
         return User::query()
-            ->when($boucherieId, fn ($q) => $q->where('boucherie_id', $boucherieId))
+            ->when($boucherieId, function ($query) use ($boucherieId) {
+                $query->where(function ($scoped) use ($boucherieId) {
+                    $scoped->where('boucherie_id', $boucherieId)
+                        ->orWhereHas('roles', fn ($roles) => $roles->where('name', 'fournisseur'));
+                });
+            })
             ->with(['roles', 'boucherie.fournisseurAssigne.user', 'fournisseur.boucheries'])
             ->select(['id', 'name', 'email', 'boucherie_id', 'created_at'])
             ->latest()

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDistributionRequest;
 use App\Http\Resources\DistributionResource;
 use App\Models\Abattage;
+use App\Models\User;
 use App\Services\DistributionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,14 +34,24 @@ class DistributionController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
+        $statut = $request->query('statut');
 
         $paginator = match (true) {
-            $user->hasRole('fournisseur') => $this->service->paginateByFournisseur($user->id),
-            $user->hasRole('boucher')     => $this->service->paginateByBoucherie((string) $user->boucherie_id),
-            default                       => $this->service->paginateAll(),
+            $user->hasRole('fournisseur') => $this->service->paginateByFournisseur($user->id, $statut),
+            $user->hasRole('boucher')     => $this->paginateForBoucher($user, $statut),
+            default                       => $this->service->paginateAll($statut),
         };
 
         return DistributionResource::collection($paginator);
+    }
+
+    private function paginateForBoucher(User $user, ?string $statut): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        if ($user->boucherie_id === null || $user->boucherie_id === '') {
+            abort(422, 'Votre compte boucher n\'est rattaché à aucune boucherie.');
+        }
+
+        return $this->service->paginateByBoucherie((string) $user->boucherie_id, $statut);
     }
 
     /**

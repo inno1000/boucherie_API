@@ -142,7 +142,22 @@ describe('PATCH /api/v1/versements/{id}/rejeter', function () {
             'motif_rejet' => 'Montant insuffisant',
         ])->assertOk()
           ->assertJsonPath('data.statut', 'rejete')
+          ->assertJsonPath('data.motif_rejet', 'Montant insuffisant')
           ->assertJsonPath('message', 'Versement rejeté.');
+    });
+
+    it('exige un motif ou une pièce jointe pour rejeter', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        $versement   = Versement::factory()->create([
+            'fournisseur_user_id' => $user->id,
+            'statut'              => 'en_attente',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->patchJson("/api/v1/versements/{$versement->id}/rejeter", [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['motif_rejet']);
     });
 
     it('retourne 401 sans authentification', function () {

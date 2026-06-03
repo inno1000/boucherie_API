@@ -19,6 +19,19 @@ class BoucherieRepository
             ->paginate($perPage);
     }
 
+    /** Boucheries rattachées au fournisseur via `fournisseur_boucherie`. */
+    public function paginateForFournisseurUser(int $fournisseurUserId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->model->query()
+            ->select(['id', 'nom', 'adresse', 'ville', 'telephone', 'actif', 'created_at', 'updated_at'])
+            ->whereHas(
+                'fournisseurAssigne',
+                fn ($q) => $q->where('fournisseurs.user_id', $fournisseurUserId),
+            )
+            ->latest()
+            ->paginate($perPage);
+    }
+
     public function findOrFail(string $id): Boucherie
     {
         return $this->model->query()->findOrFail($id);

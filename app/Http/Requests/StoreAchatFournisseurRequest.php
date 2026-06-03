@@ -27,13 +27,14 @@ class StoreAchatFournisseurRequest extends FormRequest
                 'exists:fournisseurs,id',
             ],
             'date_achat'               => ['required', 'date'],
-            'montant_total'            => ['required', 'numeric', 'min:0'],
             'notes'                    => ['nullable', 'string'],
             'animaux'                  => ['required', 'array', 'min:1'],
             'animaux.*.espece'         => ['required', 'string', Rule::exists('enum_valeurs', 'valeur')->where('type', 'espece_animal')],
             'animaux.*.poids_vif_kg'   => ['required', 'numeric', 'min:0'],
             'animaux.*.prix_achat'     => ['required', 'numeric', 'min:0'],
-            'animaux.*.numero_tag'     => ['nullable', 'string', 'max:50'],
+            'animaux.*.numero_tag'         => ['nullable', 'string', 'max:50'],
+            'animaux.*.attachment_ids'     => ['sometimes', 'array', 'max:3'],
+            'animaux.*.attachment_ids.*'   => ['uuid', 'exists:attachments,id'],
         ];
     }
 }

@@ -134,11 +134,18 @@ class VersementController extends Controller
      */
     public function rejeter(UpdateVersementStatutRequest $request, string $id): JsonResponse
     {
+        $validated = $request->validated();
+        $attachmentIds = is_array($validated['attachment_ids'] ?? null)
+            ? $validated['attachment_ids']
+            : [];
+
         $versement = $this->service->rejeter(
             $id,
             $request->user()->id,
-            $request->validated('motif_rejet'),
+            $validated['motif_rejet'] ?? null,
         );
+
+        $versement = $this->linkAttachments($versement, $attachmentIds, $request->user());
 
         return response()->json([
             'data'    => new VersementResource($versement),

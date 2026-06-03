@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginUserRequest;
 use App\Http\Requests\RegisterUserRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -84,5 +86,41 @@ class AuthController extends Controller
         return new UserResource(
             app(AuthService::class)->loadUserRelations(auth()->user()),
         );
+    }
+
+    /**
+     * Mettre à jour le profil du compte connecté (nom, e-mail — tous rôles authentifiés).
+     *
+     * @authenticated
+     */
+    public function updateMe(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $this->authService->updateProfile(
+            $request->user(),
+            $request->validated(),
+        );
+
+        return response()->json([
+            'data'    => new UserResource($user),
+            'message' => 'Profil mis à jour avec succès.',
+        ]);
+    }
+
+    /**
+     * Changer le mot de passe du compte connecté (tout utilisateur authentifié).
+     *
+     * @authenticated
+     */
+    public function updatePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        $user = $this->authService->updatePassword(
+            $request->user(),
+            $request->validated('password'),
+        );
+
+        return response()->json([
+            'data'    => new UserResource($user),
+            'message' => 'Mot de passe mis à jour avec succès.',
+        ]);
     }
 }

@@ -33,7 +33,8 @@ class UserController extends Controller
      * Liste des utilisateurs
      *
      * Retourne la liste paginée des utilisateurs. Si l'admin est rattaché à une boucherie,
-     * seuls les utilisateurs de cette boucherie sont retournés. Sinon tous les utilisateurs.
+     * les comptes de cette boucherie sont retournés ainsi que **tous les fournisseurs**
+     * (leur `boucherie_id` utilisateur est null). Sinon tous les utilisateurs.
      *
      * @response {"data":[{"id":1,"name":"Alice Martin","email":"alice@boucherie.com","role":"admin","roles":["admin"],"boucherie_id":"uuid-boucherie","boucherie":null,"entite_fournisseur":null,"created_at":"2024-01-15T10:00:00.000Z"},{"id":3,"name":"Jean Éleveur","email":"jean@elevage.com","role":"fournisseur","roles":["fournisseur"],"boucherie_id":null,"boucherie":null,"entite_fournisseur":{"id":"uuid-fourn","nom":"Élevage du Sahel","contact":"Jean Éleveur","telephone":"+22600000002","email":"contact@elevage.com","adresse":"Zone d'élevage"},"created_at":"2024-01-15T10:00:00.000Z"}],"links":{"first":"http://localhost/api/v1/users?page=1","last":"http://localhost/api/v1/users?page=1","prev":null,"next":null},"meta":{"current_page":1,"from":1,"last_page":1,"per_page":15,"to":2,"total":2}}
      */

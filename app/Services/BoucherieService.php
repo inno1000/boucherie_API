@@ -17,6 +17,11 @@ class BoucherieService
         return $this->repository->paginate($perPage);
     }
 
+    public function paginateForFournisseurUser(int $fournisseurUserId, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->repository->paginateForFournisseurUser($fournisseurUserId, $perPage);
+    }
+
     public function findById(string $id): Boucherie
     {
         return $this->repository->findOrFail($id);

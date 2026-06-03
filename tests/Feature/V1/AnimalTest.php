@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Animal;
 use App\Models\Boucherie;
+use App\Models\EnumValeur;
 use App\Models\Fournisseur;
 use Laravel\Sanctum\Sanctum;
 
@@ -82,5 +83,89 @@ describe('GET /api/v1/animaux/{id}', function () {
 
         $this->getJson("/api/v1/animaux/{$animal->id}")
             ->assertUnauthorized();
+    });
+});
+
+describe('PATCH /api/v1/animaux/{id}', function () {
+    it('met à jour un animal en attente (fournisseur)', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        EnumValeur::factory()->especeAnimal('bovin')->create();
+        EnumValeur::factory()->especeAnimal('ovin')->create();
+
+        $animal = Animal::factory()->create([
+            'fournisseur_id' => $fournisseur->id,
+            'boucherie_id'   => null,
+            'statut'         => 'en_attente',
+            'espece'         => 'bovin',
+            'prix_achat'     => 100000,
+        ]);
+
+        $this->patchJson("/api/v1/animaux/{$animal->id}", [
+            'espece'       => 'ovin',
+            'poids_vif_kg' => 120,
+            'prix_achat'   => 150000,
+            'numero_tag'   => 'TAG-UPD',
+        ])->assertOk()
+          ->assertJsonPath('data.espece', 'ovin')
+          ->assertJsonPath('data.numero_tag', 'TAG-UPD')
+          ->assertJsonPath('message', 'Animal mis à jour.');
+    });
+
+    it('retourne 403 pour un animal abattu', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        EnumValeur::factory()->especeAnimal('bovin')->create();
+
+        $animal = Animal::factory()->create([
+            'fournisseur_id' => $fournisseur->id,
+            'boucherie_id'   => null,
+            'statut'         => 'abattu',
+        ]);
+
+        $this->patchJson("/api/v1/animaux/{$animal->id}", [
+            'espece'       => 'bovin',
+            'poids_vif_kg' => 100,
+            'prix_achat'   => 100000,
+        ])->assertForbidden();
+    });
+});
+
+describe('DELETE /api/v1/animaux/{id}', function () {
+    it('supprime un animal en attente (fournisseur)', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        $animal = Animal::factory()->create([
+            'fournisseur_id' => $fournisseur->id,
+            'boucherie_id'   => null,
+            'statut'         => 'en_attente',
+        ]);
+
+        $this->deleteJson("/api/v1/animaux/{$animal->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Animal supprimé.');
+
+        $this->assertDatabaseMissing('animaux', ['id' => $animal->id]);
+    });
+
+    it('retourne 403 pour un animal abattu', function () {
+        $fournisseur = Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        $animal = Animal::factory()->create([
+            'fournisseur_id' => $fournisseur->id,
+            'boucherie_id'   => null,
+            'statut'         => 'abattu',
+        ]);
+
+        $this->deleteJson("/api/v1/animaux/{$animal->id}")
+            ->assertForbidden();
     });
 });

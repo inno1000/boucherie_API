@@ -11,30 +11,41 @@ class DistributionRepository
 {
     public function __construct(private readonly Distribution $model) {}
 
-    public function paginateByFournisseur(int $fournisseurUserId, int $perPage = 15): LengthAwarePaginator
+    public function paginateByFournisseur(int $fournisseurUserId, ?string $statut = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model->query()
+        return $this->baseQuery($statut)
             ->where('fournisseur_user_id', $fournisseurUserId)
             ->with(['abattage', 'boucherie', 'produit', 'lignes', 'reception'])
             ->latest()
             ->paginate($perPage);
     }
 
-    public function paginateByBoucherie(string $boucherieId, int $perPage = 15): LengthAwarePaginator
+    public function paginateByBoucherie(string $boucherieId, ?string $statut = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model->query()
+        return $this->baseQuery($statut)
             ->where('boucherie_id', $boucherieId)
             ->with(['abattage', 'fournisseurUser', 'produit', 'lignes', 'reception'])
             ->latest()
             ->paginate($perPage);
     }
 
-    public function paginateAll(int $perPage = 15): LengthAwarePaginator
+    public function paginateAll(?string $statut = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model->query()
+        return $this->baseQuery($statut)
             ->with(['abattage', 'boucherie', 'produit', 'lignes', 'fournisseurUser', 'reception'])
             ->latest()
             ->paginate($perPage);
+    }
+
+    private function baseQuery(?string $statut): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = $this->model->query();
+
+        if ($statut !== null && $statut !== '') {
+            $query->where('statut', $statut);
+        }
+
+        return $query;
     }
 
     public function findOrFail(string $id): Distribution

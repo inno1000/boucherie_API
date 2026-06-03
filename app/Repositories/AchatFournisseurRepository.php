@@ -24,7 +24,7 @@ class AchatFournisseurRepository
 
     public function findOrFail(string $id): AchatFournisseur
     {
-        return $this->model->query()->with(['fournisseur', 'animaux', 'user'])->findOrFail($id);
+        return $this->model->query()->with(['fournisseur', 'animaux.attachments', 'user'])->findOrFail($id);
     }
 
     public function create(array $data): AchatFournisseur

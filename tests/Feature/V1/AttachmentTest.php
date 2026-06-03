@@ -25,6 +25,19 @@ describe('POST /api/v1/attachments', function () {
         $this->assertDatabaseCount('attachments', 1);
     });
 
+    it('enregistre une image (fournisseur)', function () {
+        Storage::fake('local');
+        $fournisseur = \App\Models\Fournisseur::factory()->create();
+        $user        = fournisseurUser($fournisseur);
+        Sanctum::actingAs($user);
+
+        $file = UploadedFile::fake()->image('animal.jpg', 800, 600);
+
+        $this->post('/api/v1/attachments', ['file' => $file])
+            ->assertCreated()
+            ->assertJsonPath('data.mime_type', 'image/jpeg');
+    });
+
     it('retourne 422 si fichier absent', function () {
         $boucherie = Boucherie::factory()->create();
         Sanctum::actingAs(boucherUser($boucherie));

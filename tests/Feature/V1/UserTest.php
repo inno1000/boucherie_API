@@ -36,6 +36,22 @@ describe('GET /api/v1/users', function () {
         $this->getJson('/api/v1/users')
             ->assertUnauthorized();
     });
+
+    it('inclut les fournisseurs même si l\'admin est rattaché à une boucherie', function () {
+        $boucherie = Boucherie::factory()->create();
+        $admin     = adminUser($boucherie->id);
+        $supplier  = fournisseurUser();
+        Fournisseur::factory()->create(['user_id' => $supplier->id]);
+        $localStaff = boucherUser($boucherie);
+
+        Sanctum::actingAs($admin);
+
+        $ids = collect($this->getJson('/api/v1/users')->assertOk()->json('data'))
+            ->pluck('id');
+
+        expect($ids)->toContain($supplier->id)
+            ->and($ids)->toContain($localStaff->id);
+    });
 });
 
 describe('POST /api/v1/users', function () {

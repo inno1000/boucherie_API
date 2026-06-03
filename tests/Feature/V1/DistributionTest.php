@@ -41,6 +41,25 @@ describe('GET /api/v1/distributions', function () {
         $this->getJson('/api/v1/distributions')
             ->assertUnauthorized();
     });
+
+    it('filtre par statut pour le boucher', function () {
+        $boucherie = Boucherie::factory()->create();
+        Sanctum::actingAs(boucherUser($boucherie));
+
+        Distribution::factory()->create([
+            'boucherie_id' => $boucherie->id,
+            'statut'       => 'en_attente',
+        ]);
+        Distribution::factory()->create([
+            'boucherie_id' => $boucherie->id,
+            'statut'       => 'acceptee',
+        ]);
+
+        $this->getJson('/api/v1/distributions?statut=en_attente')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.statut', 'en_attente');
+    });
 });
 
 describe('POST /api/v1/distributions', function () {

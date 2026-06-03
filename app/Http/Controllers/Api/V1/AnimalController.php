@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateAnimalRequest;
 use App\Http\Resources\AnimalResource;
 use App\Services\AnimalService;
 use Illuminate\Http\JsonResponse;
@@ -54,6 +55,45 @@ class AnimalController extends Controller
 
         return response()->json([
             'data' => new AnimalResource($animal),
+        ]);
+    }
+
+    /**
+     * Modifier un animal non abattu
+     *
+     * @response {"data":{"id":"uuid","espece":"bovin","poids_vif_kg":350,"prix_achat":200000,"numero_tag":"TAG-001","statut":"en_attente"},"message":"Animal mis à jour."}
+     * @response 403 {"message":"Action non autorisée."}
+     * @response 422 {"message":"Seuls les animaux non abattus peuvent être modifiés."}
+     */
+    public function update(UpdateAnimalRequest $request, string $id): JsonResponse
+    {
+        $animal = $this->service->findById($id);
+        $this->authorize('update', $animal);
+
+        $updated = $this->service->update($id, $request->validated());
+
+        return response()->json([
+            'data'    => new AnimalResource($updated),
+            'message' => 'Animal mis à jour.',
+        ]);
+    }
+
+    /**
+     * Supprimer un animal non abattu
+     *
+     * @response 200 {"message":"Animal supprimé."}
+     * @response 403 {"message":"Action non autorisée."}
+     * @response 422 {"message":"Seuls les animaux non abattus peuvent être supprimés."}
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $animal = $this->service->findById($id);
+        $this->authorize('delete', $animal);
+
+        $this->service->delete($id);
+
+        return response()->json([
+            'message' => 'Animal supprimé.',
         ]);
     }
 }

@@ -15,7 +15,7 @@ class AnimalRepository
     {
         $query = $this->model->query()
             ->when($boucherieId, fn ($q) => $q->where('boucherie_id', $boucherieId))
-            ->with(['fournisseur'])
+            ->with(['fournisseur', 'attachments', 'abattage'])
             ->latest();
 
         if (!empty($filters['statut'])) {
@@ -29,7 +29,7 @@ class AnimalRepository
     {
         $query = $this->model->query()
             ->whereHas('fournisseur', fn ($q) => $q->where('user_id', $userId))
-            ->with(['fournisseur'])
+            ->with(['fournisseur', 'attachments', 'abattage'])
             ->latest();
 
         if (!empty($filters['statut'])) {
@@ -41,7 +41,7 @@ class AnimalRepository
 
     public function findOrFail(string $id): Animal
     {
-        return $this->model->query()->with(['fournisseur', 'abattage', 'achatFournisseur'])->findOrFail($id);
+        return $this->model->query()->with(['fournisseur', 'attachments', 'abattage', 'achatFournisseur'])->findOrFail($id);
     }
 
     public function create(array $data): Animal

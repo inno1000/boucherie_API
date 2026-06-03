@@ -66,7 +66,8 @@ class AchatFournisseurController extends Controller
             $request->validated(),
             $user->boucherie_id,
             $user->id,
-            $fournisseurId
+            $fournisseurId,
+            $user,
         );
 
         return response()->json([
