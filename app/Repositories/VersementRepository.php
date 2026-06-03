@@ -11,27 +11,36 @@ class VersementRepository
 {
     public function __construct(private readonly Versement $model) {}
 
-    public function paginateByBoucherie(string $boucherieId, int $perPage = 15): LengthAwarePaginator
-    {
+    public function paginateByBoucherie(
+        string $boucherieId,
+        ?string $statut = null,
+        int $perPage = 15,
+    ): LengthAwarePaginator {
         return $this->model->query()
             ->where('boucherie_id', $boucherieId)
+            ->when($statut, fn ($q) => $q->where('statut', $statut))
             ->with(['fournisseurUser', 'validePar'])
             ->latest()
             ->paginate($perPage);
     }
 
-    public function paginateByFournisseur(int $fournisseurUserId, int $perPage = 15): LengthAwarePaginator
-    {
+    public function paginateByFournisseur(
+        int $fournisseurUserId,
+        ?string $statut = null,
+        int $perPage = 15,
+    ): LengthAwarePaginator {
         return $this->model->query()
             ->where('fournisseur_user_id', $fournisseurUserId)
+            ->when($statut, fn ($q) => $q->where('statut', $statut))
             ->with(['boucherie', 'validePar'])
             ->latest()
             ->paginate($perPage);
     }
 
-    public function paginateAll(int $perPage = 15): LengthAwarePaginator
+    public function paginateAll(?string $statut = null, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model->query()
+            ->when($statut, fn ($q) => $q->where('statut', $statut))
             ->with(['boucherie', 'fournisseurUser', 'validePar'])
             ->latest()
             ->paginate($perPage);

@@ -16,19 +16,25 @@ class VersementService
         private readonly FournisseurBoucherieService $fournisseurBoucherieService,
     ) {}
 
-    public function paginateByBoucherie(string $boucherieId): LengthAwarePaginator
-    {
-        return $this->repository->paginateByBoucherie($boucherieId);
+    public function paginateByBoucherie(
+        string $boucherieId,
+        ?string $statut = null,
+        int $perPage = 15,
+    ): LengthAwarePaginator {
+        return $this->repository->paginateByBoucherie($boucherieId, $statut, $perPage);
     }
 
-    public function paginateByFournisseur(int $fournisseurUserId): LengthAwarePaginator
-    {
-        return $this->repository->paginateByFournisseur($fournisseurUserId);
+    public function paginateByFournisseur(
+        int $fournisseurUserId,
+        ?string $statut = null,
+        int $perPage = 15,
+    ): LengthAwarePaginator {
+        return $this->repository->paginateByFournisseur($fournisseurUserId, $statut, $perPage);
     }
 
-    public function paginateAll(): LengthAwarePaginator
+    public function paginateAll(?string $statut = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->paginateAll();
+        return $this->repository->paginateAll($statut, $perPage);
     }
 
     public function findById(string $id): Versement

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesListQuery;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateAnimalRequest;
 use App\Http\Resources\AnimalResource;
@@ -20,6 +21,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class AnimalController extends Controller
 {
+    use ResolvesListQuery;
+
     public function __construct(private readonly AnimalService $service) {}
 
     /**
@@ -33,11 +36,12 @@ class AnimalController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $user    = $request->user();
-        $filters = $request->only('statut');
+        $filters = ['statut' => $this->statutFromRequest($request)];
+        $perPage = $this->perPageFromRequest($request);
 
         $paginator = $user->hasRole('fournisseur')
-            ? $this->service->paginateByFournisseurUser($user->id, $filters)
-            : $this->service->paginate($user->boucherie_id, $filters);
+            ? $this->service->paginateByFournisseurUser($user->id, $filters, $perPage)
+            : $this->service->paginate($user->boucherie_id, $filters, $perPage);
 
         return AnimalResource::collection($paginator);
     }

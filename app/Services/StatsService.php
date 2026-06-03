@@ -18,6 +18,7 @@ class StatsService
     private function periodeStart(string $periode): Carbon
     {
         return match ($periode) {
+            'jour'    => Carbon::today()->startOfDay(),
             'semaine' => Carbon::now()->subDays(7),
             'annee'   => Carbon::now()->subYear(),
             default   => Carbon::now()->subDays(30),

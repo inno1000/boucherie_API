@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesListQuery;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDistributionRequest;
 use App\Http\Resources\DistributionResource;
@@ -22,6 +23,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class DistributionController extends Controller
 {
+    use ResolvesListQuery;
+
     public function __construct(private readonly DistributionService $service) {}
 
     /**
@@ -33,25 +36,29 @@ class DistributionController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $user = $request->user();
-        $statut = $request->query('statut');
+        $user    = $request->user();
+        $statut  = $this->statutFromRequest($request);
+        $perPage = $this->perPageFromRequest($request);
 
         $paginator = match (true) {
-            $user->hasRole('fournisseur') => $this->service->paginateByFournisseur($user->id, $statut),
-            $user->hasRole('boucher')     => $this->paginateForBoucher($user, $statut),
-            default                       => $this->service->paginateAll($statut),
+            $user->hasRole('fournisseur') => $this->service->paginateByFournisseur($user->id, $statut, $perPage),
+            $user->hasRole('boucher')     => $this->paginateForBoucher($user, $statut, $perPage),
+            default                       => $this->service->paginateAll($statut, $perPage),
         };
 
         return DistributionResource::collection($paginator);
     }
 
-    private function paginateForBoucher(User $user, ?string $statut): \Illuminate\Pagination\LengthAwarePaginator
-    {
+    private function paginateForBoucher(
+        User $user,
+        ?string $statut,
+        int $perPage,
+    ): \Illuminate\Pagination\LengthAwarePaginator {
         if ($user->boucherie_id === null || $user->boucherie_id === '') {
             abort(422, 'Votre compte boucher n\'est rattaché à aucune boucherie.');
         }
 
-        return $this->service->paginateByBoucherie((string) $user->boucherie_id, $statut);
+        return $this->service->paginateByBoucherie((string) $user->boucherie_id, $statut, $perPage);
     }
 
     /**

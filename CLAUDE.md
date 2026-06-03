@@ -141,6 +141,19 @@ throw ValidationException::withMessages(['email' => ['Mauvais mot de passe']]);
 abort(401, 'Identifiants invalides.');
 ```
 
+## Hub « Aujourd’hui »
+
+- `GET /api/v1/dashboard/today` — résumé, tâches prioritaires et activité récente (scoping rôle).
+- Service : `DashboardService` ; stats du jour via `StatsService` avec `periode=jour`.
+- Listes : `?statut=` et `?limit=` (max 100) sur animaux, distributions, versements.
+
+### Flux métier canonique
+
+```text
+Fournisseur : Achat → Abattage → Distribution → (Boucher réceptionne) → Stock → Vente
+Boucher     : Réception → Stock → Vente → Versement fournisseur
+```
+
 ## Variables d'environnement clés
 
 ```env

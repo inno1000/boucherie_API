@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Concerns\LinksAttachments;
+use App\Http\Controllers\Concerns\ResolvesListQuery;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreVersementRequest;
 use App\Http\Requests\UpdateVersementStatutRequest;
@@ -25,6 +26,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class VersementController extends Controller
 {
     use LinksAttachments;
+    use ResolvesListQuery;
 
     public function __construct(private readonly VersementService $service) {}
 
@@ -37,12 +39,14 @@ class VersementController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $user = $request->user();
+        $user    = $request->user();
+        $statut  = $this->statutFromRequest($request);
+        $perPage = $this->perPageFromRequest($request);
 
         $paginator = match (true) {
-            $user->hasRole('fournisseur') => $this->service->paginateByFournisseur($user->id),
-            $user->hasRole('boucher')     => $this->service->paginateByBoucherie((string) $user->boucherie_id),
-            default                       => $this->service->paginateAll(),
+            $user->hasRole('fournisseur') => $this->service->paginateByFournisseur($user->id, $statut, $perPage),
+            $user->hasRole('boucher')     => $this->service->paginateByBoucherie((string) $user->boucherie_id, $statut, $perPage),
+            default                       => $this->service->paginateAll($statut, $perPage),
         };
 
         return VersementResource::collection($paginator);

@@ -123,7 +123,7 @@ class StatsController extends Controller
 
     private function resolvePeriode(Request $request): string
     {
-        return in_array($request->query('periode'), ['semaine', 'mois', 'annee'], true)
+        return in_array($request->query('periode'), ['jour', 'semaine', 'mois', 'annee'], true)
             ? $request->query('periode')
             : 'mois';
     }

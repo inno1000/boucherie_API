@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\LivraisonController;
 use App\Http\Controllers\Api\V1\PaiementController;
 use App\Http\Controllers\Api\V1\ProduitController;
 use App\Http\Controllers\Api\V1\ReceptionController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\StatsController;
 use App\Http\Controllers\Api\V1\StockController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -44,6 +45,9 @@ Route::prefix('v1')->group(function () {
         // ── Pièces jointes audio ─────────────────────────────────────────────
         Route::post('attachments', [AttachmentController::class, 'store']);
         Route::get('attachments/{attachment}/stream', [AttachmentController::class, 'stream']);
+
+        // ── Tableau de bord ──────────────────────────────────────────────────
+        Route::get('dashboard/today', [DashboardController::class, 'today']);
 
         // ── Statistiques ─────────────────────────────────────────────────────
         Route::middleware('role:admin')->get('stats/admin',       [StatsController::class, 'admin']);
